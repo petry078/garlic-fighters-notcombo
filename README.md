@@ -23,4 +23,6 @@ Use the keyboard arrow keys to move the vampire.
 3. Install Pygame Zero dependency with the command `pip install pgzero`;
 4. Run `python3 game.py`.
 
+> You must have Python installed.
+
 Good luck, have fun!
