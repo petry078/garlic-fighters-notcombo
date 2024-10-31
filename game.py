@@ -9,7 +9,14 @@ HEIGHT = 400
 
 # Actors
 bg = Actor("background_image", (WIDTH // 2, HEIGHT // 2))
-vampire = Actor("vampire.gif")
+
+# Vampire animation frames
+vampire_frames = ["vampire_a", "vampire_b"]  # Add all frames here
+vampire = Actor(vampire_frames[0])  # Start with the first frame
+
+# Animation control variables
+vampire_frame_index = 0
+vampire_frame_delay = 60  # Delay in frames (1 second if running at 60 FPS)
 
 # Global variables
 velocity = 5
@@ -113,8 +120,8 @@ def draw():
 
 # Update game frame
 def update():
+    global vampire_frame_index, vampire_frame_delay
     if game_started:
-        global score, lives
         if keyboard.LEFT and vampire.left > 0:
             vampire.x -= velocity
             vampire.image = "vampire_left"
@@ -125,6 +132,14 @@ def update():
             vampire.y -= velocity
         elif keyboard.DOWN and vampire.bottom < HEIGHT:
             vampire.y += velocity
+
+        # Update vampire animation frames with 1-second delay
+        if vampire_frame_delay == 0:
+            vampire_frame_index = (vampire_frame_index + 1) % len(vampire_frames)
+            vampire.image = vampire_frames[vampire_frame_index]
+            vampire_frame_delay = 60  # Reset delay (1 second at 60 FPS)
+        else:
+            vampire_frame_delay -= 1
 
         for enemy in enemies:
             enemy.x += enemy.velocity_x
@@ -146,10 +161,10 @@ def update():
                 if not over:
                     game_over()
 
-# Change vampire image left-right
+# Change vampire image back to idle on key release
 def on_key_up(key):
     if key == keys.LEFT or key == keys.RIGHT:
-        vampire.image = "vampire.gif"
+        vampire.image = vampire_frames[vampire_frame_index]  # Go back to animated frames
 
 # Handle mouse clicks
 def on_mouse_down(pos):
