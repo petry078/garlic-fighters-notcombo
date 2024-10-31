@@ -1,93 +1,164 @@
 # Imports
-
-import pgzero
 import pgzrun
-import random
-from pgzero.actor import Actor
-from pgzero.keyboard import keyboard
+from random import randint
 
 # Constants
+TITLE = "Garlic Fighters Notcombo"
+WIDTH = 600
+HEIGHT = 400
 
-WIDTH = 720
-HEIGHT = 480
-BG_COLOR = (0, 51, 102)
-MAX_ENEMIES = 20
+# Actors
+bg = Actor("background_image", (WIDTH // 2, HEIGHT // 2))
+vampire = Actor("vampire.gif")
 
-# Garlic (enemy) class
-class Enemy(Actor):
-    def __init__(self, image, pos, hero):
-        super().__init__(image, pos)
-        self.hero = hero
+# Global variables
+velocity = 5
+enemies = []
+timer = 0
+enemy_interval = 0.5
+over = False
+music_on = True
+game_started = False
 
-    def update(self):
-        if self.x < self.hero.x:
-            self.x += 1
-        elif self.x > self.hero.x:
-            self.x -= 1
-        if self.y < self.hero.y:
-            self.y += 1
-        elif self.y > self.hero.y:
-            self.y -= 1
+# Buttons
+start_button = Rect((WIDTH // 2 - 50, HEIGHT // 2 - 60), (100, 30))
+toggle_music_button = Rect((WIDTH // 2 - 50, HEIGHT // 2), (100, 30))
+exit_button = Rect((WIDTH // 2 - 50, HEIGHT // 2 + 60), (100, 30))
 
-# Fighter (hero) class
-class Fighter(Actor):
-    def update(self):
-        if keyboard.left:
-            self.x -= 5
-            if self.x < 0:
-                self.x = 0
-        if keyboard.right:
-            self.x += 5
-            if self.x > WIDTH:
-                self.x = WIDTH
-        if keyboard.up:
-            self.y -= 5
-            if self.y < 0:
-                self.y = 0
-        if keyboard.down:
-            self.y += 5
-            if self.y > HEIGHT:
-                self.y = HEIGHT
+# Start function
+def start():
+    global timer, velocity, enemy_interval, over, game_started
+    vampire.pos = (WIDTH // 2, HEIGHT // 2)
+    over = False
+    timer = 0
+    velocity = 5
+    enemy_interval = 1.0
+    enemies.clear()
+    game_started = True
+    clock.schedule_interval(increment_timer, 1.0)
+    clock.schedule_interval(spawn_enemy, enemy_interval)
+    clock.schedule_interval(speed_up, 1.0)
+    spawn_enemy()
 
-# Fighter instance
-fighter = Fighter('fighter')
-fighter.x = WIDTH / 2
-fighter.y = HEIGHT / 2
+# Toggle music function
+def toggle_music():
+    global music_on
+    if music_on:
+        music.stop()
+    else:
+        music.play("background_music")
+    music_on = not music_on
 
+# Music
+music.play("freaky_halloween")
 
-# Double the enemies each 5 sec
-enemies = [Enemy('garlic', (random.randint(0, WIDTH), random.randint(0, HEIGHT)), fighter)]
+# Make enemies faster
+def speed_up():
+    global enemy_interval
+    enemy_interval -= enemy_interval * 0.05
+    clock.unschedule(spawn_enemy)
+    clock.schedule_interval(spawn_enemy, enemy_interval)
 
-def double_enemies():
-    if len(enemies) < MAX_ENEMIES:
-        new_enemies = []
-        for _ in range(len(enemies)):
-            if len(enemies) + len(new_enemies) >= MAX_ENEMIES:
-                break
-            side = random.choice(['top', 'bottom', 'left', 'right'])
-            if side == 'top':
-                pos = (random.randint(0, WIDTH), 0)
-            elif side == 'bottom':
-                pos = (random.randint(0, WIDTH), HEIGHT)
-            elif side == 'left':
-                pos = (0, random.randint(0, HEIGHT))
-            elif side == 'right':
-                pos = (WIDTH, random.randint(0, HEIGHT))
-            new_enemies.append(Enemy('garlic', pos, fighter))
-        enemies.extend(new_enemies)
+# Game over function
+def game_over():
+    global over
+    over = True
+    clock.schedule_unique(start, 3.5)
+    clock.unschedule(increment_timer)
+    clock.unschedule(spawn_enemy)
+    clock.unschedule(speed_up)
+    enemies.clear()
+    clock.schedule_unique(game_over_sound, sounds.eep.get_length())
 
-pgzero.clock.schedule_interval(double_enemies, 5.0)
+# Play Game over sound
+def game_over_sound():
+    sounds.gameover.play()
 
-# Update screen frame
-def update():
-    fighter.update()
-    for enemy in enemies:
-        enemy.update()
+# Counter increment
+def increment_timer():
+    global timer
+    timer += 1
 
+# Creates new enemies
+def spawn_enemy():
+    enemy = Actor("enemy")
+    enemy.x = randint(0, 1) * WIDTH
+    enemy.y = randint(100, HEIGHT - 100)
+    if enemy.x == 0:
+        enemy.velocity_x = randint(2, 6)
+    else:
+        enemy.velocity_x = randint(-6, -2)
+    enemy.velocity_y = randint(-6, 6)
+    enemies.append(enemy)
+
+# Draw function
 def draw():
-    screen.fill(BG_COLOR)
-    fighter.draw()
-    for enemy in enemies:
-        enemy.draw()
+    screen.clear()
+    if game_started:
+        bg.draw()
+        vampire.draw()
+        for enemy in enemies:
+            enemy.draw()
+        screen.draw.text(f"Time: {timer}", midtop=(WIDTH // 2, 10))
+        if over:
+            screen.draw.text("Game Over", center=(WIDTH // 2, HEIGHT // 2))
+    else:
+        screen.draw.text(TITLE, center=(WIDTH // 2, HEIGHT // 2 - 100), fontsize=50)
+        screen.draw.filled_rect(start_button, "green")
+        screen.draw.text("Start", center=start_button.center, fontsize=30)
+        screen.draw.filled_rect(toggle_music_button, "blue")
+        screen.draw.text("Music", center=toggle_music_button.center, fontsize=30)
+        screen.draw.filled_rect(exit_button, "red")
+        screen.draw.text("Exit", center=exit_button.center, fontsize=30)
 
+# Update game frame
+def update():
+    if game_started:
+        global score, lives
+        if keyboard.LEFT and vampire.left > 0:
+            vampire.x -= velocity
+            vampire.image = "vampire_left"
+        elif keyboard.RIGHT and vampire.right < WIDTH:
+            vampire.x += velocity
+            vampire.image = "vampire_right"
+        elif keyboard.UP and vampire.top > 0:
+            vampire.y -= velocity
+        elif keyboard.DOWN and vampire.bottom < HEIGHT:
+            vampire.y += velocity
+
+        for enemy in enemies:
+            enemy.x += enemy.velocity_x
+            enemy.y += enemy.velocity_y
+            enemy.angle += 5
+            if (
+                enemy.top > HEIGHT
+                or enemy.bottom < 0
+                or enemy.left > WIDTH
+                or enemy.right < 0
+            ):
+                enemies.remove(enemy)
+
+        # Collision detection
+        for enemy in enemies:
+            if vampire.colliderect(enemy):
+                enemies.remove(enemy)
+                sounds.eep.play()
+                if not over:
+                    game_over()
+
+# Change vampire image left-right
+def on_key_up(key):
+    if key == keys.LEFT or key == keys.RIGHT:
+        vampire.image = "vampire.gif"
+
+# Handle mouse clicks
+def on_mouse_down(pos):
+    if start_button.collidepoint(pos):
+        start()
+    elif toggle_music_button.collidepoint(pos):
+        toggle_music()
+    elif exit_button.collidepoint(pos):
+        quit()
+
+# Start with menu screen
 pgzrun.go()
