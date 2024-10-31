@@ -18,14 +18,9 @@ Use the keyboard arrow keys to move the vampire.
 
 ## How to install
 
-### Dependencies
-
-* Python3.
-* Pygame Zero.
-
-From the root directory of the project `garlic-fighters-notcombo/`:
-
-1. Open the terminal;
-2. Run `python3 game.py`.
+1. Clone this repository;
+2. Open the repository `garlic-fighters-notcombo/` on terminal;
+3. Install Pygame Zero dependency with the command `pip install pgzero`;
+4. Run `python3 game.py`.
 
 Good luck, have fun!
